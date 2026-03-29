@@ -186,6 +186,16 @@ To demonstrate RAG, I've implemented a simple RAG-based chatbot that's deployed 
 
 A more interesting future project could be to create an RAG-based Resume writier to customize a resume based on the role's requirements, with the user's personal experiences, projects, etc. as the knowledge base. The model would have to be fine-tuned to write in a specific style and stick to one-line bull points.
 
+## Running Locally
+
+To run this project,
+
+1. Clone the repository
+2. Install the dependencies with `pip install -r requirements.txt`
+3. Create a `.env` file in the `backend/` directory
+4. Add your Groq API key to the `.env` file with the variable name `GROQ_API_KEY`
+5. Run the backend with `python backend/app.py`
+
 ## Credit
 
 This project was inspired by the paper ["Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"](https://arxiv.org/abs/2005.11401) by Patrick Lewis, et al (v4; last revised 12 April 2021).
