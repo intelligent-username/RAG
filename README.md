@@ -2,15 +2,13 @@
 
 ![The Fog Warning by Winslow Homer, 1885](imgs/cover.jpg)
 
-Chatbots are trained to predict the most likely sequence of characters (tokens) that should follow a given prompt. This method of generation is in no direct way grounded in truth, which is why hallucinations happen so often. In theory, you could create a model that responds fluently in a given language by while speaking complete nonesense. In most cases, training data tends to consist of largely truthful information, so the model picks up true facts to incorporate into its answers. However, if the data is flawed, or simply new or rare, the models will respond accurately.
+Chatbots are trained to predict the most likely sequence of characters (tokens) that should follow a given prompt. This method of generation is in no direct way grounded in truth, which is why hallucinations happen so often. In theory, you could create a model that responds fluently in a given language by while speaking complete nonesense. In most cases, training data tends to consist of largely truthful information, so the model picks up true facts to incorporate into its answers. However, if the data is flawed, or simply new or rare, the models will respond inaccurately.
 
 Of course, this is a problematic for anyone trying to reliably extract information out of a language model.
 
-Similar problems arise
+Retrieval-Augmented Generation is a way of solving this problem. Essentially, it's telling the model to cite its sources for everything it says. We add an external knowledge base that is retrieved from during every query, and pass the information from this knowledge base onto the language model as extra context to answer with. Of course, this still isn't bullet-proof, but it does decrease the probability of hallucinations.
 
-Retrieval-Augmented Generation is a way of solving this problem. Essentially, it's like telling the model to cite its sources for everything it says. We add an external knowledge base that is retrieved from during every query, and pass the information from this knowledge base onto the language model as extra context to answer with. Of course, this still isn't bullet-proof, but it does decrease the probability of hallucinations.
-
-Aside from reducing hallucations, RAG can allow language models to narrow the scope of the topic being disccused, inject updated or personalized information, create better citations, and save on token usage.
+Aside from reducing hallucinations, RAG can allow language models to narrow the scope of the topic being discussed, inject updated or personalized information, create better citations, and save on token usage.
 
 ## Math
 
@@ -20,13 +18,13 @@ All of the math behind LLMs is essentially just the same as the [math behind neu
 
 Normally, when a model is trained, it's trying to find the most likely estimator of some observed data. It's looking for the best parameters (estimators) to model the relationship between features and labels. Since models are just trained on verbal data, they basically learn to predict a series of grammatically accurate sentences, with the only truth value within those sentences coming from the information that is inherently built into the language being spoken.
 
-RAG grounds the predictions in real-world information, helping us a language model's answer with added context: we find the most likely tokens *given* the prompt and the retrieved context (which is weighted more strongly). By forcing the model to use the retrieved data in it's answer, we have more control over the truth value of the generated response. The model can still be creative but will be ancored by the retrieved information.
+RAG grounds the predictions in real-world information, helping us a language model's answer with added context: we find the most likely tokens *given* the prompt and the retrieved context (which is weighted more strongly). By forcing the model to use the retrieved data in it's answer, we have more control over the truth value of the generated response. The model can still be creative but will be anchored by the retrieved information.
 
-Mathematiicaly, if the neural network produces the model $f(x | \theta)$, then adding the RAG would simply produce a new predictor function, $F(x | \theta, c)$, where $c$ is the retrieved context. The model is then trained to find the parameters $\theta$ that maximize the likelihood of the observed data given the prompt and the retrieved context. In training, it's taught to reduce cross-entropy loss of each token at each step, in order to reach the smallest possible Kullback-Leibler divergence between the predicted distribution and the true distribution of tokens given the prompt and the retrieved context.
+Mathematically, if the neural network produces the model $f(x | \theta)$, then adding the RAG would simply produce a new predictor function, $F(x | \theta, c)$, where $c$ is the retrieved context. The model is then trained to find the parameters $\theta$ that maximize the likelihood of the observed data given the prompt and the retrieved context. In training, it's taught to reduce cross-entropy loss of each token at each step, in order to reach the smallest possible Kullback-Leibler divergence between the predicted distribution and the true distribution of tokens given the prompt and the retrieved context.
 
 ![KL Divergence Example](imgs/KL.gif)
 
-[Try it Here](https://htmlpreview.github.io/?https://github.com/yourusername/yourrepo/blob/main/kl_divergence.html)
+[Try it Here](https://kl-divergence.netlify.app/)
 
 ### Embedding Information
 
@@ -114,13 +112,13 @@ $$
 
 Cosine similarity is used most often. For more general details on similarity metrics, read [this](https://github.com/intelligent-username/Similarity-Metrics).
 
-## Implementation
+Once we understand this simple math, we can implement RAG in a few simple steps. For this explanation, the existence of a sufficient language model is assumed, and the focus will be on the retrieval process.
 
-Once we understand this simple math, we can implement RAG in a few simple steps.
+## Implementation
 
 ### Chunking and Indexing
 
-Chunking is when we break up the data into smaller pieces. Oftentimes, we'll split the same source with multiple chunk sizes. For example, if we're including a work like Aristotle's Ethics, we might split it into chunks of singular sentences, fully paragraphs, and ~400 word blocks. This way, we can retrieve more specific information when needed, but also have the option to retrieve more general information when necessary.
+Chunking is when we break up the data into smaller pieces. Oftentimes, we'll split the same source with multiple chunk sizes. For example, if we're adding a work like Aristotle's Ethics, we might split it into chunks of singular sentences, fully paragraphs, and ~400 word blocks. This way, we can retrieve more specific information when needed, but also have the option to retrieve more general information when necessary.
 
 Indexing simply refers to the process of creating the embeddings and storing them in a database for retrieval.
 
@@ -180,11 +178,13 @@ If we feed the user's data into the vector database, we can provided personalize
 
 ### PageIndex
 
-PageIndex is an alternative approach to RAG that provides a document with a reliable Table of Contents to an LLM and expects it to scan through the document to find the relevant portions. This doesn't require any embeddings or vector databases, however it is still more expensive since tokens have to be used just to read the document and the model is less likely to find relevant information from disparate sections of the context.
+PageIndex is another approach to RAG that provides a document with a reliable Table of Contents to an LLM and expects it to scan through the document to find the relevant portions. This doesn't require any embeddings or vector databases, however it is still more expensive since tokens have to be used just to read the document and the model is less likely to find relevant information from disparate sections of the context.
 
 ## Project
 
-To demonstrate RAG, I've implemented a simple RAG-based chatbot that's deployed with a small LLM. It's designed to answer questions based on specific philosophies. For example, if you ask it a question about the nature of reality from the perspective of Plato, it will respond based on Plato's works. A more personalized project would be to create an RAG-based chatbot to generate based off of the user's personal data (for example, a company-based resume writer that compares the user's projects with the company's requirements and writes a fresh resume based on that).
+To demonstrate RAG, I've implemented a simple RAG-based chatbot that's deployed with a small LLM. It's designed to answer questions based on specific philosophies. For example, if you ask it a question about the nature of reality from the perspective of Plato, it will respond based on Plato's works.
+
+A more interesting future project could be to create an RAG-based Resume writier to customize a resume based on the role's requirements, with the user's personal experiences, projects, etc. as the knowledge base. The model would have to be fine-tuned to write in a specific style and stick to one-line bull points.
 
 ## Credit
 
