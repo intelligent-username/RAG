@@ -104,7 +104,8 @@ html, body, #root {
   border-radius: 0 0 16px 16px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);
 }
-.side-panel.left  { left: 24px; width: var(--panel-w); }
+.side-panel.left  { left: 
+  px; width: var(--panel-w); }
 .side-panel.right { right: 24px; width: var(--panel-w); }
 
 .side-panel.open {

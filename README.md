@@ -209,7 +209,7 @@ PageIndex is another approach to RAG that provides a document with a reliable Ta
 
 To demonstrate RAG, I've implemented a simple RAG-based chatbot that's deployed with a small LLM. It's designed to answer questions based on specific philosophies. For example, if you ask it a question about the nature of reality from the perspective of Plato, it will respond based on Plato's works.
 
-In this project, the LLM being used comes from Groq. Vectorization is done locally with a simple custom embedding strategy (see `scripts/` for more). Vectors are stored in a local instance of Weaviate. The frontend is built with React, and the backend is built with FastAPI. In practice, we would use something much more complex, but for the sake of demonstration, this will do.
+In this project, the LLM being used comes from Groq. Vectorization is done locally with a simple custom embedding strategy (see `scripts/` for more). Vectors are stored in a local instance of Weaviate. The frontend is built with React + Vite, and the backend is built with FastAPI. In practice, we would use something much more complex, but for the sake of demonstration, this will do. Detailed instructions for each component are found in their respective directories: [frontend/README.md](./frontend/README.md) and [backend/README.md](./backend/README.md).
 
 The following is the pipeline that the project runs:
 
@@ -276,20 +276,37 @@ Clone the repository.
 git clone https://github.com/intelligent-username/RAG/
 ```
 
-For the backend:
+### For the Backend
 
 1. Navigate to the `backend/` directory
-2. Install the dependencies with `pip install -r requirements.txt`
-3. Create a `.env` file in the `backend/` directory
-4. Add your Groq API key to the `.env` file with the variable name `GROQ_API_KEY`
-5. Run the backend with `python backend/app.py`
+2. Install the dependencies:
 
-For the frontend:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Create a `.env` file with your `GROQ_API_KEY`
+
+4. Run the server:
+
+   ```bash
+   uvicorn app:app --reload
+   ```
+
+### For the Frontend
 
 1. Navigate to the `frontend/` directory
-2. Install the dependencies with `npm install`
-3. Build the frontend with `npm run build`
-4. Run the frontend with `npm start`
+2. Install the dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+
+   ```bash
+   npm run dev
+   ```
 
 ## Credit
 
