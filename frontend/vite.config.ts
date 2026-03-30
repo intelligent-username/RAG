@@ -6,8 +6,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/query": "http://127.0.0.1:8000",
-      "/ping": "http://127.0.0.1:8000",
+      "/query":   "http://127.0.0.1:8000",
+      "/ping":    "http://127.0.0.1:8000",
+      "/upload":  "http://127.0.0.1:8000",
+      "/session": "http://127.0.0.1:8000",
     },
   },
 });

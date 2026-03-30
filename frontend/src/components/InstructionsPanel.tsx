@@ -12,7 +12,7 @@ export default function InstructionsPanel({ value, onSave }: Props) {
     <>
       <p className="panel-title">Custom Instructions</p>
       <p className="panel-hint">
-        Appended to the system prompt. Core rules cannot be removed here.
+        What should the answers keep in mind?
       </p>
       <textarea
         className="instructions-area"

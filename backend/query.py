@@ -1,3 +1,8 @@
+"""
+Initiating and Querying the LLM
+Requires the Retriever Script for Context
+"""
+
 from pydantic import BaseModel
 from typing import List, Optional, Any
 
@@ -77,3 +82,11 @@ class Query(BaseModel):
         )
 
         return {"response": response.choices[0].message.content}
+    
+    def __str__(self):
+        return(f"This query has the following attributes:\n"
+               f"Query: {self.query}\n"
+               f"Context: {self.context}\n"
+               f"Author: {self.author}\n"
+               f"Custom Instructions: {self.custom_instructions}"
+               )

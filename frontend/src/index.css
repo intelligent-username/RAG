@@ -184,6 +184,24 @@ html, body, #root {
 .drop-icon { font-size: 22px; }
 .drop-text { font-size: 12px; color: var(--muted); text-align: center; }
 
+/* Small hint shown under upload drop zones */
+.size-note {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  border: 1px solid rgba(255,255,255,0.02);
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.size-note span {
+  display: block;
+  line-height: 1.15;
+}
+
 /* ── File list ──────────────────────────────────────────── */
 .file-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .file-item {
@@ -209,6 +227,9 @@ html, body, #root {
   border-radius: 4px; flex-shrink: 0; transition: color 0.1s;
 }
 .file-remove:hover { color: #f87171; }
+.file-status-ok  { color: var(--neon-code); font-size: 11px; flex-shrink: 0; margin: 0 4px; }
+.file-status-err { color: #fb923c; font-size: 11px; flex-shrink: 0; margin: 0 4px; cursor: help; }
+.upload-error    { font-size: 12px; color: #f87171; padding: 4px 2px; }
 
 /* ── Instructions textarea ──────────────────────────────── */
 .instructions-area {
