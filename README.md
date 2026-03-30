@@ -2,25 +2,50 @@
 
 ![The Fog Warning by Winslow Homer, 1885](imgs/cover.jpg)
 
-Chatbots are trained to predict the most likely sequence of characters (tokens) that should follow a given prompt. This method of generation is in no direct way grounded in truth, which is why hallucinations happen so often. In theory, you could create a model that responds fluently in a given language by while speaking complete nonesense. In most cases, training data tends to consist of largely truthful information, so the model picks up true facts to incorporate into its answers. However, if the data is flawed, or simply new or rare, the models will respond inaccurately.
+## Outline
 
-Of course, this is a problematic for anyone trying to reliably extract information out of a language model.
+- [Outline](#outline)
+- [Math](#math)
+- [Implementation](#implementation)
+- [Modifications and Advancements](#modifications-and-advancements)
+- [Applications](#applications)
+- [Project](#project)
+- [Running Locally](#running-locally)
+- [Credit](#credit)
 
-Retrieval-Augmented Generation is a way of solving this problem. Essentially, it's telling the model to cite its sources for everything it says. We add an external knowledge base that is retrieved from during every query, and pass the information from this knowledge base onto the language model as extra context to answer with. Of course, this still isn't bullet-proof, but it does decrease the probability of hallucinations.
+Chatbots generate text by predicting the most likely next token in a sequence. This method of generation is not inherently grounded in truth, which is why hallucinations happen so often. In theory, you could create a model that responds fluently in a given language by while speaking complete nonsense. In most cases, training data tends to consist of largely truthful information, so the model picks up true facts to incorporate into its answers. However, if the data is flawed, or simply new or rare, the models will respond inaccurately.
+
+Retrieval-Augmented Generation addresses this. Essentially, it's telling the model what sources to use for its answer during inference. Instead of relying solely on learned parameters, the model conditions its response on retrieved data, improving factual alignment and allowing for updated or domain-specific knowledge.
 
 Aside from reducing hallucinations, RAG can allow language models to narrow the scope of the topic being discussed, inject updated or personalized information, create better citations, and save on token usage.
 
 ## Math
 
-All of the math behind LLMs is essentially just the same as the [math behind neural networks](https://github.com/intelligent-username/Backpropagation?tab=readme-ov-file#neural-network-basics), except at a bigger scale (with up to a few trillion parameters). RAG is just a layer on top of that which augments the response by inserting (preferably) human-written context. The math behind RAG is simply the result of adding a single 'context' term to the equation for the probability of a given token being the next token in the sequence. The context term is weighted differently than the prompt, and is added to the equation for the probability of a given token being the next token in the sequence.
+All of the math behind LLMs is essentially just the same as the [math behind neural networks](https://github.com/intelligent-username/Backpropagation?tab=readme-ov-file#neural-network-basics), except at a bigger scale (with up to a few trillion parameters). RAG is just a layer on top of that which augments the response by inserting (preferably) human-written context. The math behind RAG is simply the result of adding a single 'context' term to the equation for the probability of a given token being the next token in the sequence. The context term is concatenated with the prompt. It affects what distribution is genearted for the next token in the sequence, which changes what tokens are generated.
 
 ### Maximum A Posteriori Estimation
 
-Normally, when a model is trained, it's trying to find the most likely estimator of some observed data. It's looking for the best parameters (estimators) to model the relationship between features and labels. Since models are just trained on verbal data, they basically learn to predict a series of grammatically accurate sentences, with the only truth value within those sentences coming from the information that is inherently built into the language being spoken.
+Normally, when a model is trained, it's trying to find the most likely estimator of some observed data. It's looking for the best parameters (estimators) to model the relationship between features and labels. Since models are just trained on verbal data, they basically learn to predict a series of grammatically accurate sentences, with the only truth value within those sentences coming from the information that is inherently built into the language being used.
 
-RAG grounds the predictions in real-world information, helping us a language model's answer with added context: we find the most likely tokens *given* the prompt and the retrieved context (which is weighted more strongly). By forcing the model to use the retrieved data in it's answer, we have more control over the truth value of the generated response. The model can still be creative but will be anchored by the retrieved information.
+RAG grounds the predictions in real-world information, helping language model answer with added context: we find the most likely tokens *given* the prompt and the retrieved context (which is weighted more strongly).
 
-Mathematically, if the neural network produces the model $f(x | \theta)$, then adding the RAG would simply produce a new predictor function, $F(x | \theta, c)$, where $c$ is the retrieved context. The model is then trained to find the parameters $\theta$ that maximize the likelihood of the observed data given the prompt and the retrieved context. In training, it's taught to reduce cross-entropy loss of each token at each step, in order to reach the smallest possible Kullback-Leibler divergence between the predicted distribution and the true distribution of tokens given the prompt and the retrieved context.
+Formally, we're looking for the most accurate possible parameters, $\theta^*$, which is written as:
+
+$$
+\theta^* = \arg\max_{\theta} P(\theta | x, c)
+$$
+
+Where $x$ is the prompt and $c$ is the retrieved context. Using Bayes' theorem, we can rewrite this as:
+
+$$
+\theta^* = \arg\max_{\theta} \frac{P(x, c | \theta) P(\theta)}{P(x, c)}
+$$
+
+Which helps us solve for $\theta^*$, analytically or even perform gradient descent.
+
+Mathematically, if the neural network produces the model $f(x | \theta)$, then adding the RAG would simply produce a new predictor function, $F(x | \theta, c)$, where $c$ is the retrieved context. The model is then trained to find the parameters $\theta$ that maximize the likelihood of the observed data given the prompt and the retrieved context.
+
+In training, it's taught to reduce cross-entropy loss of each token at each step, in order to reach the smallest possible Kullback-Leibler divergence between the predicted distribution and the true distribution of tokens given the prompt and the retrieved context.
 
 ![KL Divergence Example](imgs/KL.gif)
 
@@ -132,7 +157,7 @@ Our embeddings are stored efficiently in what's called a vector database. This i
 
 Once the embeddings are finished, we take in a query. The query is then also temporarily embedded into the same vector space.
 
-We look for the top-k most similar vector to this newly embedded 'query vector'. The closest neighbours are found using one of the similarity metrics mentioned earlier. We then add the retrieved information to the prompt and feed it into the language model to generate a response. We may want to give preference to shorter or longer chunks of retrieved information, and, if adding more than one result, we may want to order them in a specific way (for example, from most similar to least similar) while filtering out repeats (i.e. same piece of a chunk appearing in multiple results). There are cases where we want to conduct an approximate search in order to save on time.
+We look for the $\text{top }k$ most similar vector to this newly embedded 'query vector'. The closest neighbours are found using one of the similarity metrics mentioned earlier. We then add the retrieved information to the prompt and feed it into the language model to generate a response. We may want to give preference to shorter or longer chunks of retrieved information, and, if adding more than one result, we may want to order them in a specific way (for example, from most similar to least similar) while filtering out repeats (i.e. same piece of a chunk appearing in multiple results). There are cases where we want to conduct an approximate search in order to save on time.
 
 ### Fine-Tuning
 
@@ -174,7 +199,7 @@ If we simply force the model to always include retrieved information in its resp
 
 ### User-Specific Customization
 
-If we feed the user's data into the vector database, we can provided personalized responses.
+If we feed the user's data into the vector database, we can provide personalized responses. This allows the chatbot to give advice based on the user's specific situation, or to answer questions about the user's personal data.
 
 ### PageIndex
 
@@ -184,17 +209,87 @@ PageIndex is another approach to RAG that provides a document with a reliable Ta
 
 To demonstrate RAG, I've implemented a simple RAG-based chatbot that's deployed with a small LLM. It's designed to answer questions based on specific philosophies. For example, if you ask it a question about the nature of reality from the perspective of Plato, it will respond based on Plato's works.
 
-A more interesting future project could be to create an RAG-based Resume writier to customize a resume based on the role's requirements, with the user's personal experiences, projects, etc. as the knowledge base. The model would have to be fine-tuned to write in a specific style and stick to one-line bull points.
+In this project, the LLM being used comes from Groq. Vectorization is done locally with a simple custom embedding strategy (see `scripts/` for more). Vectors are stored in a local instance of Weaviate. The frontend is built with React, and the backend is built with FastAPI. In practice, we would use something much more complex, but for the sake of demonstration, this will do.
+
+The following is the pipeline that the project runs:
+
+Pre-run
+
+```md
+1) Download all relevant works in question.
+
+2) Create the vector database by chunking and indexing.
+    (use the scripts/ folder for this)
+
+3) Start the backend server.
+
+4) Start the frontend server.
+```
+
+During the run:
+
+```md
+1) Take in the user's query.
+
+2) Embed the query into the same vector space.
+
+3) Retrieve the most similar vectors to the query vector.
+
+4) Augment the user's query for clarity.
+
+5) Add the retrieved information to the prompt.
+
+6) Feed the prompt into the language model to generate a response.
+
+7) Display the response to the user.
+```
+
+Example:
+
+```md
+Author: Aristotle
+Q: What is virtue?
+
+Process: embed the query
+Top 3 results:
+1) "Virtue is a state of character concerned with choice, lying in a mean, i.e. the mean relative to us, this being determined by reason and in the way in which the man of practical wisdom would determine it." (Nicomachean Ethics, Book II, Chapter 6)
+2) "Moral virtue comes about as a result of habit, whence also its name ethike is one that is formed by a slight variation from the word ethos (habit)." (Nicomachean Ethics, Book II, Chapter 1)
+3) "The virtues we get by first exercising them, as also happens in the case of the arts as well. For the things we have to learn before we can do them, we learn by doing them, e.g., mentally we learn by doing acts of thought, and in the case of the virtues we learn by doing virtuous acts. This is why none of the moral virtues arises in us by nature; for nothing that exists by nature can form a habit contrary to its nature." (Nicomachean Ethics, Book II, Chapter 1)
+
+Prompt Augmentation: "Answer the question 'What is virtue?' based on Aristotle's philosophy, using the following information as context: 1): [] 2): [] 3): []"
+
+Response: "According to Aristotle, virtue is a state of character concerned with choice, lying in a mean relative to us, determined by reason and in the way in which the man of practical wisdom would determine it. Moral virtue comes about as a result of habit, and we learn it by doing virtuous acts. None of the moral virtues arises in us by nature; for nothing that exists by nature can form a habit contrary to its nature."
+```
+
+<!-- A more interesting future project could be to create an RAG-based Resume writer to customize a resume based on the role's requirements, with the user's personal experiences, projects, etc. as the knowledge base. The model would have to be fine-tuned to write in a specific style and stick to one-line bull points.
+ -->
 
 ## Running Locally
 
-To run this project,
+Before running this project, ensure you have [Python](https://www.python.org/downloads/) and [npm](https://www.npmjs.com/) (or some npm alternative) installed on your machine.
 
-1. Clone the repository
+To run this project, take the following steps:
+
+Clone the repository.
+
+```bash
+git clone https://github.com/intelligent-username/RAG/
+```
+
+For the backend:
+
+1. Navigate to the `backend/` directory
 2. Install the dependencies with `pip install -r requirements.txt`
 3. Create a `.env` file in the `backend/` directory
 4. Add your Groq API key to the `.env` file with the variable name `GROQ_API_KEY`
 5. Run the backend with `python backend/app.py`
+
+For the frontend:
+
+1. Navigate to the `frontend/` directory
+2. Install the dependencies with `npm install`
+3. Build the frontend with `npm run build`
+4. Run the frontend with `npm start`
 
 ## Credit
 
