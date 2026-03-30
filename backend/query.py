@@ -1,61 +1,79 @@
 from pydantic import BaseModel
-from openai import OpenAI
+from typing import List, Optional, Any
 
-class Context(BaseModel):
+class ContextItem(BaseModel):
     quote: str
     author: str
     relevance: float
-    src: str
-
-    def __init__(self, quote: str, author: str, relevance: float, src: str):
-        """
-        Args:
-            - quote is the actual retrieved text
-            - author is the author of the retrieved text (if applicable)
-            - relevance is a score from 0 to 1 indicating relevance
-            - src is the source of the retrieved text (page and line number, etc.)
-        """
-        self.quote = quote
-        self.author = author
-        self.relevance = relevance
-        self.src = src
-
+    citation: str
 
 class Query(BaseModel):
     query: str
-    context: Context
-    instructions: str
+    context: List[ContextItem] = []
+    author: Optional[str] = None
+    custom_instructions: Optional[str] = None
 
-    def __init__(self, query: str, context: Context, author: str):
-        self.role = "You're an incisive tutor and writer. You are to answer the questions as best as you can."
-        self.query = query
-        self.context = context
-        self.instructions = "The context provided should be used in the answer. Respond to the query directly. The relevance of each piece of context ranges from 0 to 1." + f"The current author we're discussing is {author}." if author else "You are to present the perspective of each author in the context in a balanced manner."
-    
-    def call(self):
-        return {
-            "query": self.query,
-            "context": {
-                "quote": self.context.quote,
-                "author": self.context.author,
-                "relevance": self.context.relevance
-            },
-            "instructions": self.instructions
-        }
+    def build_messages(self) -> List[dict]:
+        role = (
+            "You are a scholarly tutor and writer. You operate under the following strict rules — "
+            "no exceptions.\n\n"
+            "STYLE RULES:\n"
+            "- Write in a clear, rigorous, classical prose style; incisive rather than verbose, "
+            "formal rather than casual.\n"
+            "- Never open with extensive greetings, affirmations, filler phrases, or casual language "
+            "(e.g. never 'Sure, I can help with that!', 'Great question!', 'Of course!', or similar).\n"
+            "- Begin your answer immediately and directly.\n"
+            "- Vary sentence structure; do not repeat the same syntactic pattern consecutively.\n\n"
+            "DATE RULES:\n"
+            "- Always write dates as 'Month Day, Year BC' or 'Month Day, Year AD'. "
+            "Never use BCE, CE, or any other era notation. This is non-negotiable.\n\n"
+            "Always include dates when drawing out timelines and details"
+            "SCOPE RULES:\n"
+            "- Answer only questions pertaining to philosophy, intellectual history, and related academic topics. "
+            "Decline all other requests."
+        )
 
-    def ask(self, client: OpenAI):
+        instructions = (
+            "Respond directly to the query without preamble. "
+        )
+        if self.author:
+            instructions += f"The subject of discussion is {self.author}; confine your answer to that scope."
+        else:
+            instructions += "Where multiple authors appear in the context, represent each perspective fairly."
+
+        # System message = persistent meta-prompt (role + behavioural instructions + any user additions)
+        system_content = f"{role}\n\n{instructions}"
+        if self.custom_instructions:
+            system_content += f"\n\nADDITIONAL USER INSTRUCTIONS:\n{self.custom_instructions}"
+
+        # User message = dynamic payload (context passages + query)
+        context_body = ""
+        if self.context:
+            context_str_list = [
+                f"[Result {i+1}]\nQuote: {item.quote}\nAuthor: {item.author}"
+                f"\nRelevance: {item.relevance}\nCitation: {item.citation}"
+                for i, item in enumerate(self.context)
+            ]
+            context_body = "Context:\n" + "\n\n".join(context_str_list) + "\n\n"
+
+        user_content = f"{context_body}Query:\n{self.query}"
+
+        return [
+            {"role": "system", "content": system_content},
+            {"role": "user",   "content": user_content},
+        ]
+
+
+    def ask(self, client: Any):
         # Actually CALL Groq here
         response = client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            messages = [
-                {
-                "role": self.role,
-                "content": self.call()
-                }
-            ],
-            temperature=0.7, max_completion_tokens=4096,
-            top_p=0.9, reasoning_effort = "medium",
-            stream=True, stop=["\n"]
+            messages=self.build_messages(),
+            temperature=0.75, 
+            max_completion_tokens=4096,
+            top_p=0.9, 
+            reasoning_effort="medium",
+            stream=False # I like the streams but FastAPI has a harder time with this. And Groq is just so fast.
         )
 
-        yield response
+        return {"response": response.choices[0].message.content}

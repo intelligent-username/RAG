@@ -5,7 +5,7 @@ import os
 
 from fastapi import FastAPI
 from dotenv import load_dotenv
-from .query import Query
+from query import Query
 from groq import Groq
 
 import os
@@ -16,7 +16,23 @@ key = os.getenv("GROQ_KEY")
 
 client = Groq()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
+
 
 @app.get("/")
 def read_root():
