@@ -76,7 +76,7 @@ export default function UploadForm({ onAdd, resetAfterAdd = true, autoFocus = fa
   const vectorizeBtnLabel = vectorizing
     ? "Uploading…"
     : vectorized
-    ? "✓ Received"
+    ? "Received"
     : "Vectorize";
 
   return (
